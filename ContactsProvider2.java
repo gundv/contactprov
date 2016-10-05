@@ -451,7 +451,7 @@ public class ContactsProvider2 extends AbstractContactsProvider
 
     private static final String SELECTION_STARRED_FROM_RAW_CONTACTS =
             "SELECT " + RawContacts.STARRED
-                    + " FROM " + FAKE_CONTENT_VIEW_MAPPING.get(Tables.RAW_CONTACTS) + " WHERE " + RawContacts._ID + "=?";
+                    + " FROM " + ContactsDatabaseHelper.FAKE_CONTENT_VIEW_MAPPING.get(Tables.RAW_CONTACTS) + " WHERE " + RawContacts._ID + "=?";
 
     private interface DataContactsQuery {
         public static final String TABLE = "data "

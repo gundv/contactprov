@@ -451,7 +451,7 @@ public class ContactsProvider2 extends AbstractContactsProvider
 
     private static final String SELECTION_STARRED_FROM_RAW_CONTACTS =
             "SELECT " + RawContacts.STARRED
-                    + " FROM " + Tables.RAW_CONTACTS + " WHERE " + RawContacts._ID + "=?";
+                    + " FROM " + FAKE_CONTENT_VIEW_MAPPING.get(Tables.RAW_CONTACTS) + " WHERE " + RawContacts._ID + "=?";
 
     private interface DataContactsQuery {
         public static final String TABLE = "data "
@@ -1515,6 +1515,16 @@ public class ContactsProvider2 extends AbstractContactsProvider
         scheduleBackgroundTask(BACKGROUND_TASK_OPEN_WRITE_ACCESS);
         scheduleBackgroundTask(BACKGROUND_TASK_CLEANUP_PHOTOS);
         scheduleBackgroundTask(BACKGROUND_TASK_CLEAN_DELETE_LOG);
+
+        //Create Fake View for Virtual Contact Data
+		//call after all Android built-in procress done, in the purpose prevent confliction
+		//between the Android and Our defined function
+		//in other word after completed preparing the provider class we create our VirtualViewMethod
+		//but this portion can apply to limited version of Android, from API 19 A.K.A KitKat or Later version of android 
+		//due to getCallingPackage() function
+		final SQLiteDatabase db=mContactsHelper.getWritableDatabase();
+		ContactsDatabaseHelper.createFakeViewFor(db,ContactsDatabaseHelper.FAKE_CONTENT_VIEW_MAPPING,getCallingPackage());
+		
 
         return true;
     }

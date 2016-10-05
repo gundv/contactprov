@@ -121,6 +121,78 @@ public class ContactsDatabaseHelper extends SQLiteOpenHelper {
      */
     static final int DATABASE_VERSION = 910;
 
+
+    //fake method	
+	public interface FakeContactsViews{
+		
+		//by replace some table name VARIABLE in Tables interface to this FakeContactsViews Views
+		//Name VARIABLE then we can use partly control over the database data
+		// for example
+		// for the we change the parameter that called the contanst Tables.CONTACTS->FakeContactsViews.CONTACTS
+		// for the field name we use the same field name and the same data-type in other to reduce
+		//coding time and also the CONSTANT PARAMETER NAME we also using the same name inside coding for 
+		//editable code and easy refactoring later on
+
+		
+		
+        public static final String FAKE_PREFIX="fake_view_";
+        public static final String CONTACTS=FAKE_PREFIX+"contact";
+        public static final String RAW_CONTACTS=FAKE_PREFIX+"raw_contact";
+        public static final String PHONE_LOOKUP=FAKE_PREFIX+"phone_lookup";
+        public static final String NAME_LOOKUP=FAKE_PREFIX+"name_lookup";
+        public static final String DATA=FAKE_PREFIX+"data";
+        public static final String ACCOUNTS=FAKE_PREFIX+"accounts";
+        public static final String GROUPS=FAKE_PREFIX+"groups";
+		
+		
+
+    }
+
+
+    public final static HashMap<String,String> FAKE_CONTENT_VIEW_MAPPING=new HashMap<String,String>();
+
+    private static void createFakeView(final SQLiteDatabase db, final String forTableName, String toViewName){
+        
+
+        String sql="CREATE VIEW IF NOT EXIST "+toViewName+" AS SELECT * FROM "+forTableName;
+
+        db.execSQL(sql);
+
+       
+    }
+
+
+    public static void createFakeViewFor(final SQLiteDatabase db,final HashMap<String,String> hm,final String packageName){
+        for(String key:hm.keySet()){
+            createFakeView(db,key,hm.get(key));
+        }
+		db.close();
+    }
+	
+	//the HashMap<String,String> FAKE_CONTENT_VIEW_MAPPING is the mapping of Built-in Tables name
+	//to Our Virtual Views Name, by calling FAKE_CONTENT_VIEW_MAPPING.get(Tables.[NAME]) we will get
+	//the mapping data. This parameter, However, is OPTIONAL in this class since it will use in the other class ContactsProvider2.java
+	//, because as explained in (public interface FakeContactsViews)
+	//we are using the same name as Tables interface. However, this parameter can play an importance role
+	//while we refactor the android built-in Parameters to make it's more readable for later coding
+	//For Example
+	// instead of Tables.CONTACTS with FakeContactsViews.CONTACTS, we replace Tables.CONTACTS with FAKE_CONTENT_VIEW_MAPPING.get(Tables.CONTACTS)
+	//and for our define parameter we will just use FakeContactsViews.CONTACTS
+	//by do this we will later easily find out which one is the Replace one and Which one is our written code or SQL Command
+    //***Developer importance note: because when code obfuscated all the all function name and parameter will be
+	//shortened
+	static {
+        FAKE_CONTENT_VIEW_MAPPING.put(Tables.CONTACTS,FakeContactsViews.CONTACTS);
+        FAKE_CONTENT_VIEW_MAPPING.put(Tables.RAW_CONTACTS,FakeContactsViews.RAW_CONTACTS);
+        FAKE_CONTENT_VIEW_MAPPING.put(Tables.PHONE_LOOKUP,FakeContactsViews.PHONE_LOOKUP);
+        FAKE_CONTENT_VIEW_MAPPING.put(Tables.NAME_LOOKUP,FakeContactsViews.NAME_LOOKUP);
+        FAKE_CONTENT_VIEW_MAPPING.put(Tables.DATA,FakeContactsViews.DATA);
+        FAKE_CONTENT_VIEW_MAPPING.put(Tables.GROUPS,FakeContactsViews.GROUPS);
+        FAKE_CONTENT_VIEW_MAPPING.put(Tables.ACCOUNTS,FakeContactsViews.ACCOUNTS);
+
+    }
+	//end fake
+
     public interface Tables {
         public static final String CONTACTS = "contacts";
         public static final String DELETED_CONTACTS = "deleted_contacts";
@@ -184,7 +256,7 @@ public class ContactsDatabaseHelper extends SQLiteOpenHelper {
 
         // NOTE: This requires late binding of GroupMembership MIME-type
         // TODO Consolidate settings and accounts
-        public static final String RAW_CONTACTS_JOIN_SETTINGS_DATA_GROUPS = Tables.RAW_CONTACTS
+        public static final String RAW_CONTACTS_JOIN_SETTINGS_DATA_GROUPS = FAKE_CONTENT_VIEW_MAPPING.get(Tables.RAW_CONTACTS)
                 + " JOIN " + Tables.ACCOUNTS + " ON ("
                 +   RawContactsColumns.CONCRETE_ACCOUNT_ID + "=" + AccountsColumns.CONCRETE_ID
                     + ")"
@@ -219,8 +291,8 @@ public class ContactsDatabaseHelper extends SQLiteOpenHelper {
                 + "LEFT OUTER JOIN contacts ON (raw_contacts.contact_id = contacts._id)";
 
         public static final String CONTACTS_JOIN_RAW_CONTACTS_DATA_FILTERED_BY_GROUPMEMBERSHIP =
-                Tables.CONTACTS
-                    + " INNER JOIN " + Tables.RAW_CONTACTS
+                FAKE_CONTENT_VIEW_MAPPING.get(Tables.CONTACTS)
+                    + " INNER JOIN " + FAKE_CONTENT_VIEW_MAPPING.get(Tables.RAW_CONTACTS)
                         + " ON (" + RawContactsColumns.CONCRETE_CONTACT_ID + "="
                             + ContactsColumns.CONCRETE_ID
                         + ")"
@@ -266,7 +338,7 @@ public class ContactsDatabaseHelper extends SQLiteOpenHelper {
                 + "INNER JOIN view_raw_contacts ON (name_lookup.raw_contact_id = "
                 + "view_raw_contacts._id)";
 
-        public static final String RAW_CONTACTS_JOIN_ACCOUNTS = Tables.RAW_CONTACTS
+        public static final String RAW_CONTACTS_JOIN_ACCOUNTS = FAKE_CONTENT_VIEW_MAPPING.get(Tables.RAW_CONTACTS)
                 + " JOIN " + Tables.ACCOUNTS + " ON ("
                 + AccountsColumns.CONCRETE_ID + "=" + RawContactsColumns.CONCRETE_ACCOUNT_ID
                 + ")";
@@ -356,7 +428,7 @@ public class ContactsDatabaseHelper extends SQLiteOpenHelper {
                          "END)=1 THEN 1 ELSE 0 END)" +
                 " FROM " + Tables.RAW_CONTACTS_JOIN_SETTINGS_DATA_GROUPS +
                 " WHERE " + RawContactsColumns.CONCRETE_ID + "=" + OUTER_RAW_CONTACTS_ID + "))" +
-                " FROM " + Tables.RAW_CONTACTS + " AS " + OUTER_RAW_CONTACTS +
+                " FROM " + FAKE_CONTENT_VIEW_MAPPING.get(Tables.RAW_CONTACTS) + " AS " + OUTER_RAW_CONTACTS +
                 " WHERE " + RawContacts.CONTACT_ID + "=" + ContactsColumns.CONCRETE_ID +
                 " GROUP BY " + RawContacts.CONTACT_ID;
 
@@ -1899,14 +1971,14 @@ public class ContactsDatabaseHelper extends SQLiteOpenHelper {
                 + " FROM " + Tables.DATA
                 + " JOIN " + Tables.MIMETYPES + " ON ("
                 +   DataColumns.CONCRETE_MIMETYPE_ID + "=" + MimetypesColumns.CONCRETE_ID + ")"
-                + " JOIN " + Tables.RAW_CONTACTS + " ON ("
+                + " JOIN " + FAKE_CONTENT_VIEW_MAPPING.get(Tables.RAW_CONTACTS) + " ON ("
                 +   DataColumns.CONCRETE_RAW_CONTACT_ID + "=" + RawContactsColumns.CONCRETE_ID + ")"
                 + " JOIN " + Tables.ACCOUNTS + " ON ("
                 +   RawContactsColumns.CONCRETE_ACCOUNT_ID + "=" + AccountsColumns.CONCRETE_ID
                     + ")"
-                + " JOIN " + Tables.CONTACTS + " ON ("
+                + " JOIN " + FAKE_CONTENT_VIEW_MAPPING.get(Tables.CONTACTS) + " ON ("
                 +   RawContactsColumns.CONCRETE_CONTACT_ID + "=" + ContactsColumns.CONCRETE_ID + ")"
-                + " JOIN " + Tables.RAW_CONTACTS + " AS name_raw_contact ON("
+                + " JOIN " + FAKE_CONTENT_VIEW_MAPPING.get(Tables.RAW_CONTACTS) + " AS name_raw_contact ON("
                 +   Contacts.NAME_RAW_CONTACT_ID + "=name_raw_contact." + RawContacts._ID + ")"
                 + " LEFT OUTER JOIN " + Tables.PACKAGES + " ON ("
                 +   DataColumns.CONCRETE_PACKAGE_ID + "=" + PackagesColumns.CONCRETE_ID + ")"
@@ -1945,7 +2017,7 @@ public class ContactsDatabaseHelper extends SQLiteOpenHelper {
                 + dbForProfile() + " AS " + RawContacts.RAW_CONTACT_IS_USER_PROFILE + ", "
                 + rawContactOptionColumns + ", "
                 + syncColumns
-                + " FROM " + Tables.RAW_CONTACTS
+                + " FROM " + FAKE_CONTENT_VIEW_MAPPING.get(Tables.RAW_CONTACTS)
                 + " JOIN " + Tables.ACCOUNTS + " ON ("
                 +   RawContactsColumns.CONCRETE_ACCOUNT_ID + "=" + AccountsColumns.CONCRETE_ID
                     + ")";
@@ -1975,8 +2047,8 @@ public class ContactsDatabaseHelper extends SQLiteOpenHelper {
                 + buildThumbnailPhotoUriAlias(ContactsColumns.CONCRETE_ID,
                         Contacts.PHOTO_THUMBNAIL_URI) + ", "
                 + dbForProfile() + " AS " + Contacts.IS_USER_PROFILE
-                + " FROM " + Tables.CONTACTS
-                + " JOIN " + Tables.RAW_CONTACTS + " AS name_raw_contact ON("
+                + " FROM " + FAKE_CONTENT_VIEW_MAPPING.get(Tables.CONTACTS)
+                + " JOIN " + FAKE_CONTENT_VIEW_MAPPING.get(Tables.RAW_CONTACTS) + " AS name_raw_contact ON("
                 +   Contacts.NAME_RAW_CONTACT_ID + "=name_raw_contact." + RawContacts._ID + ")";
 
         db.execSQL("CREATE VIEW " + Views.CONTACTS + " AS " + contactsSelect);
@@ -1995,7 +2067,7 @@ public class ContactsDatabaseHelper extends SQLiteOpenHelper {
                 + RawContactsColumns.CONCRETE_STARRED + " AS " + RawContacts.STARRED + ","
                 + dbForProfile() + " AS " + RawContacts.RAW_CONTACT_IS_USER_PROFILE + ","
                 + Tables.GROUPS + "." + Groups.SOURCE_ID + " AS " + GroupMembership.GROUP_SOURCE_ID
-                + " FROM " + Tables.RAW_CONTACTS
+                + " FROM " + FAKE_CONTENT_VIEW_MAPPING.get(Tables.RAW_CONTACTS)
                 + " JOIN " + Tables.ACCOUNTS + " ON ("
                 +   RawContactsColumns.CONCRETE_ACCOUNT_ID + "=" + AccountsColumns.CONCRETE_ID
                     + ")"
@@ -2032,13 +2104,13 @@ public class ContactsDatabaseHelper extends SQLiteOpenHelper {
                 + RawContactsColumns.CONCRETE_ID + " AS " + Contacts.Entity.RAW_CONTACT_ID + ", "
                 + DataColumns.CONCRETE_ID + " AS " + Contacts.Entity.DATA_ID + ","
                 + Tables.GROUPS + "." + Groups.SOURCE_ID + " AS " + GroupMembership.GROUP_SOURCE_ID
-                + " FROM " + Tables.RAW_CONTACTS
+                + " FROM " + FAKE_CONTENT_VIEW_MAPPING.get(Tables.RAW_CONTACTS)
                 + " JOIN " + Tables.ACCOUNTS + " ON ("
                 +   RawContactsColumns.CONCRETE_ACCOUNT_ID + "=" + AccountsColumns.CONCRETE_ID
                     + ")"
-                + " JOIN " + Tables.CONTACTS + " ON ("
+                + " JOIN " + FAKE_CONTENT_VIEW_MAPPING.get(Tables.CONTACTS) + " ON ("
                 +   RawContactsColumns.CONCRETE_CONTACT_ID + "=" + ContactsColumns.CONCRETE_ID + ")"
-                + " JOIN " + Tables.RAW_CONTACTS + " AS name_raw_contact ON("
+                + " JOIN " + FAKE_CONTENT_VIEW_MAPPING.get(Tables.RAW_CONTACTS) + " AS name_raw_contact ON("
                 +   Contacts.NAME_RAW_CONTACT_ID + "=name_raw_contact." + RawContacts._ID + ")"
                 + " LEFT OUTER JOIN " + Tables.DATA + " ON ("
                 +   DataColumns.CONCRETE_RAW_CONTACT_ID + "=" + RawContactsColumns.CONCRETE_ID + ")"
@@ -2065,7 +2137,7 @@ public class ContactsDatabaseHelper extends SQLiteOpenHelper {
                 + " FROM " + Tables.DATA_USAGE_STAT
                 + " JOIN " + Tables.DATA + " ON ("
                 +   DataColumns.CONCRETE_ID + "=" + DataUsageStatColumns.CONCRETE_DATA_ID + ")"
-                + " JOIN " + Tables.RAW_CONTACTS + " ON ("
+                + " JOIN " + FAKE_CONTENT_VIEW_MAPPING.get(Tables.RAW_CONTACTS) + " ON ("
                 +   RawContactsColumns.CONCRETE_ID + "=" + DataColumns.CONCRETE_RAW_CONTACT_ID
                     + " )"
                 + " JOIN " + Tables.MIMETYPES + " ON ("
@@ -2096,13 +2168,13 @@ public class ContactsDatabaseHelper extends SQLiteOpenHelper {
                 StreamItemsColumns.CONCRETE_SYNC3 + ", " +
                 StreamItemsColumns.CONCRETE_SYNC4 +
                 " FROM " + Tables.STREAM_ITEMS
-                + " JOIN " + Tables.RAW_CONTACTS + " ON ("
+                + " JOIN " + FAKE_CONTENT_VIEW_MAPPING.get(Tables.RAW_CONTACTS) + " ON ("
                 + StreamItemsColumns.CONCRETE_RAW_CONTACT_ID + "=" + RawContactsColumns.CONCRETE_ID
                     + ")"
                 + " JOIN " + Tables.ACCOUNTS + " ON ("
                 +   RawContactsColumns.CONCRETE_ACCOUNT_ID + "=" + AccountsColumns.CONCRETE_ID
                     + ")"
-                + " JOIN " + Tables.CONTACTS + " ON ("
+                + " JOIN " + FAKE_CONTENT_VIEW_MAPPING.get(Tables.CONTACTS) + " ON ("
                 + RawContactsColumns.CONCRETE_CONTACT_ID + "=" + ContactsColumns.CONCRETE_ID + ")";
 
         db.execSQL("CREATE VIEW " + Views.STREAM_ITEMS + " AS " + streamItemSelect);
@@ -4989,7 +5061,7 @@ public class ContactsDatabaseHelper extends SQLiteOpenHelper {
                 + " ON (contacts_view._id = " + Tables.RAW_CONTACTS
                 + "." + RawContacts.CONTACT_ID + ")" +
                 " JOIN (SELECT " + PhoneLookupColumns.DATA_ID + "," +
-                PhoneLookupColumns.NORMALIZED_NUMBER + " FROM "+ Tables.PHONE_LOOKUP + " "
+                PhoneLookupColumns.NORMALIZED_NUMBER + " FROM "+ FAKE_CONTENT_VIEW_MAPPING.get(Tables.PHONE_LOOKUP) + " "
                 + "WHERE (" + Tables.PHONE_LOOKUP + "." + PhoneLookupColumns.MIN_MATCH + " = '");
         sb.append(minMatch);
         sb.append("')) AS lookup " +
@@ -5044,7 +5116,7 @@ public class ContactsDatabaseHelper extends SQLiteOpenHelper {
                     + " ON (contacts_view._id = raw_contacts.contact_id)");
         }
         sb.append(", (SELECT data_id, normalized_number, length(normalized_number) as len "
-                + " FROM phone_lookup " + " WHERE (" + Tables.PHONE_LOOKUP + "."
+                + " FROM phone_lookup " + " WHERE (" + FAKE_CONTENT_VIEW_MAPPING.get(Tables.PHONE_LOOKUP) + "."
                 + PhoneLookupColumns.MIN_MATCH + " = '");
         sb.append(minMatch);
         sb.append("')) AS lookup, " + Tables.DATA);
